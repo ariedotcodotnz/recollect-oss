@@ -1,6 +1,8 @@
 name = "recollect-oss"
 main = "src/index.js"
 compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"] # Add this
+module = true # Ensure ES modules are enforced
 
 # KV Namespaces
 kv_namespaces = [
