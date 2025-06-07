@@ -202,34 +202,18 @@
     // Search functionality
     class Search {
         constructor() {
-            this.searchForm = document.querySelector('form[action="/search"]');
             this.searchResults = document.getElementById('search-results');
 
-            if (this.searchForm) {
+            if (this.searchResults) {
                 this.init();
             }
         }
 
         init() {
-            this.searchForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(this.searchForm);
-                const query = formData.get('q');
-
-                if (query) {
-                    this.performSearch(query);
-                    // Update URL without page reload
-                    const url = new URL(window.location);
-                    url.searchParams.set('q', query);
-                    window.history.pushState({}, '', url);
-                }
-            });
-
             // Check if there's a query in URL on load
             const urlParams = new URLSearchParams(window.location.search);
             const query = urlParams.get('q');
             if (query && this.searchResults) {
-                this.searchForm.querySelector('input[name="q"]').value = query;
                 this.performSearch(query);
             }
         }
@@ -369,6 +353,33 @@
                 new ModelViewer(viewer, modelUrl);
             }
         });
+
+        // Handle search input on homepage
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value) {
+                    window.location.href = '/search?q=' + encodeURIComponent(e.target.value);
+                }
+            });
+        }
+
+        // Handle search query input on search page
+        const searchQuery = document.getElementById('search-query');
+        if (searchQuery) {
+            searchQuery.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.target.value) {
+                    window.location.href = '/search?q=' + encodeURIComponent(e.target.value);
+                }
+            });
+
+            // Check for query in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            if (query) {
+                searchQuery.value = query;
+            }
+        }
 
         // Add smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

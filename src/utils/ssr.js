@@ -11,7 +11,7 @@ export async function renderPage(page, data, env) {
 
     switch (page) {
         case 'home':
-            content = renderHomePage(data.collections);
+            content = renderHomePage(data);
             break;
 
         case 'collection':
@@ -71,13 +71,16 @@ export async function renderPage(page, data, env) {
       .card img { width: 100%; height: 200px; object-fit: cover; }
       .card-content { padding: 1rem; }
       .search-box { width: 100%; max-width: 600px; margin: 2rem auto; }
-      .search-box input { width: 100%; padding: 0.75rem; font-size: 1rem; border: 2px solid #ddd; border-radius: 4px; }
+      .search-form { display: flex; gap: 0.5rem; }
+      .search-form input { flex: 1; padding: 0.75rem; font-size: 1rem; border: 2px solid #ddd; border-radius: 4px; }
+      .search-form button { padding: 0.75rem 1.5rem; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+      .search-form button:hover { background: #555; }
       .item-viewer { background: #f9f9f9; padding: 2rem; border-radius: 8px; margin: 2rem 0; }
       .metadata { background: white; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
       .metadata dt { font-weight: bold; margin-top: 1rem; }
       .metadata dd { margin-left: 0; color: #666; }
       footer { background: #333; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
-      @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+      @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .search-form { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -114,59 +117,74 @@ export async function renderPage(page, data, env) {
     });
 }
 
-function renderHomePage(collections) {
+function renderHomePage(data) {
+    const collections = data?.collections || [];
+    const hasCollections = Array.isArray(collections) && collections.length > 0;
+
     return `
     <section class="hero">
         <div class="container">
             <h1>Welcome to Our Digital Collections</h1>
             <p>Explore, discover, and engage with our curated collections</p>
             <div class="search-box">
-                <form action="/search" method="get">
-                    <input type="search" name="q" placeholder="Search all collections..." aria-label="Search">
-                </form>
+                <div class="search-form">
+                    <input type="search" name="q" placeholder="Search all collections..." aria-label="Search" id="search-input">
+                    <button type="button" onclick="window.location.href='/search?q=' + document.getElementById('search-input').value">Search</button>
+                </div>
             </div>
         </div>
     </section>
     
     <section class="container">
         <h2>Featured Collections</h2>
-        <div class="grid">
-            ${collections.collections.map(collection => `
-                <article class="card">
-                    <a href="/collections/${collection.slug}" style="text-decoration: none; color: inherit;">
-                        ${collection.thumbnail_url ?
+        ${hasCollections ? `
+            <div class="grid">
+                ${collections.map(collection => `
+                    <article class="card">
+                        <a href="/collections/${collection.slug}" style="text-decoration: none; color: inherit;">
+                            ${collection.thumbnail_url ?
         `<img src="${collection.thumbnail_url}" alt="${escapeHtml(collection.title)}" loading="lazy">` :
         '<div style="height: 200px; background: #e0e0e0; display: flex; align-items: center; justify-content: center;">No Image</div>'
     }
-                        <div class="card-content">
-                            <h3>${escapeHtml(collection.title)}</h3>
-                            ${collection.description ? `<p>${escapeHtml(truncate(collection.description, 150))}</p>` : ''}
-                            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
-                                ${collection.item_count || 0} items
-                            </p>
-                        </div>
-                    </a>
-                </article>
-            `).join('')}
-        </div>
+                            <div class="card-content">
+                                <h3>${escapeHtml(collection.title)}</h3>
+                                ${collection.description ? `<p>${escapeHtml(truncate(collection.description, 150))}</p>` : ''}
+                                <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                                    ${collection.item_count || 0} items
+                                </p>
+                            </div>
+                        </a>
+                    </article>
+                `).join('')}
+            </div>
+        ` : `
+            <div style="text-align: center; padding: 3rem; background: #f5f5f5; border-radius: 8px;">
+                <p style="color: #666; margin-bottom: 1rem;">No collections yet.</p>
+                <p style="color: #666;">Visit the <a href="/admin">admin dashboard</a> to create your first collection.</p>
+            </div>
+        `}
     </section>
   `;
 }
 
-function renderCollectionPage(collection, items) {
+function renderCollectionPage(collection, data) {
+    const items = data?.items || [];
+    const pagination = data?.pagination || { total: 0, hasMore: false };
+    const hasItems = Array.isArray(items) && items.length > 0;
+
     return `
     <section class="hero">
         <div class="container">
             <h1>${escapeHtml(collection.title)}</h1>
             ${collection.description ? `<p>${escapeHtml(collection.description)}</p>` : ''}
-            <p style="margin-top: 1rem; color: #666;">${items.pagination.total} items</p>
+            <p style="margin-top: 1rem; color: #666;">${pagination.total} items</p>
         </div>
     </section>
     
     <section class="container">
         <div style="margin: 2rem 0;">
-            <form id="filter-form" style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <select name="type" onchange="this.form.submit()">
+            <div id="filter-form" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <select id="type-filter" onchange="window.location.href='?type=' + this.value">
                     <option value="">All Types</option>
                     <option value="image">Images</option>
                     <option value="document">Documents</option>
@@ -174,34 +192,40 @@ function renderCollectionPage(collection, items) {
                     <option value="video">Video</option>
                     <option value="3d">3D Objects</option>
                 </select>
-            </form>
+            </div>
         </div>
         
-        <div class="grid">
-            ${items.items.map(item => `
-                <article class="card">
-                    <a href="/items/${item.id}" style="text-decoration: none; color: inherit;">
-                        ${item.thumbnail_url ?
+        ${hasItems ? `
+            <div class="grid">
+                ${items.map(item => `
+                    <article class="card">
+                        <a href="/items/${item.id}" style="text-decoration: none; color: inherit;">
+                            ${item.thumbnail_url ?
         `<img src="${item.thumbnail_url}" alt="${escapeHtml(item.title)}" loading="lazy">` :
         `<div style="height: 200px; background: #e0e0e0; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 3rem; color: #999;">${getItemIcon(item.item_type)}</span>
-                          </div>`
+                                <span style="font-size: 3rem; color: #999;">${getItemIcon(item.item_type)}</span>
+                              </div>`
     }
-                        <div class="card-content">
-                            <h3>${escapeHtml(item.title)}</h3>
-                            ${item.description ? `<p>${escapeHtml(truncate(item.description, 100))}</p>` : ''}
-                            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
-                                ${item.item_type}
-                            </p>
-                        </div>
-                    </a>
-                </article>
-            `).join('')}
-        </div>
+                            <div class="card-content">
+                                <h3>${escapeHtml(item.title)}</h3>
+                                ${item.description ? `<p>${escapeHtml(truncate(item.description, 100))}</p>` : ''}
+                                <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                                    ${item.item_type}
+                                </p>
+                            </div>
+                        </a>
+                    </article>
+                `).join('')}
+            </div>
+        ` : `
+            <div style="text-align: center; padding: 3rem; background: #f5f5f5; border-radius: 8px;">
+                <p style="color: #666;">No items in this collection yet.</p>
+            </div>
+        `}
         
-        ${items.pagination.hasMore ? `
+        ${pagination.hasMore ? `
             <div style="text-align: center; margin: 3rem 0;">
-                <a href="?offset=${items.pagination.offset + items.pagination.limit}" 
+                <a href="?offset=${pagination.offset + pagination.limit}" 
                    style="display: inline-block; padding: 0.75rem 2rem; background: #333; color: white; text-decoration: none; border-radius: 4px;">
                     Load More
                 </a>
@@ -340,10 +364,14 @@ function renderSearchPage() {
     <div class="container" style="margin-top: 3rem;">
         <h1>Search Collections</h1>
         <div class="search-box" style="max-width: none; margin: 2rem 0;">
-            <form action="/search" method="get">
-                <input type="search" name="q" placeholder="Search items, collections, and metadata..." 
+            <div class="search-form">
+                <input type="search" id="search-query" placeholder="Search items, collections, and metadata..." 
                        aria-label="Search" autofocus>
-            </form>
+                <button type="button" onclick="
+                    const query = document.getElementById('search-query').value;
+                    if (query) window.location.href = '/search?q=' + encodeURIComponent(query);
+                ">Search</button>
+            </div>
         </div>
         
         <div id="search-results" style="margin-top: 3rem;">

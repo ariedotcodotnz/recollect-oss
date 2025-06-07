@@ -13,19 +13,44 @@ export async function getCollections(request, env) {
             ? 'SELECT * FROM collections WHERE is_public = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?'
             : 'SELECT * FROM collections ORDER BY created_at DESC LIMIT ? OFFSET ?';
 
-        const collections = await env.DB.prepare(query)
-            .bind(limit, offset)
-            .all();
+        let collections;
+        try {
+            collections = await env.DB.prepare(query)
+                .bind(limit, offset)
+                .all();
+        } catch (dbError) {
+            // Table might not exist yet
+            console.error('Database error:', dbError);
+            return new Response(JSON.stringify({
+                collections: [],
+                pagination: {
+                    total: 0,
+                    limit,
+                    offset,
+                    hasMore: false
+                },
+                error: 'Database not initialized. Please run migrations.'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
         // Get total count
         const countQuery = isPublicOnly
             ? 'SELECT COUNT(*) as total FROM collections WHERE is_public = 1'
             : 'SELECT COUNT(*) as total FROM collections';
 
-        const { total } = await env.DB.prepare(countQuery).first();
+        let total = 0;
+        try {
+            const countResult = await env.DB.prepare(countQuery).first();
+            total = countResult?.total || 0;
+        } catch (err) {
+            // Count query failed, use 0
+        }
 
         return new Response(JSON.stringify({
-            collections: collections.results,
+            collections: collections?.results || [],
             pagination: {
                 total,
                 limit,
@@ -37,8 +62,13 @@ export async function getCollections(request, env) {
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'Failed to fetch collections' }), {
-            status: 500,
+        console.error('getCollections error:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to fetch collections',
+            collections: [],
+            pagination: { total: 0, limit: 20, offset: 0, hasMore: false }
+        }), {
+            status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
     }
@@ -112,8 +142,8 @@ export async function createCollection(request, env) {
         }
 
         const result = await env.DB.prepare(
-            `INSERT INTO collections (slug, title, description, metadata, is_public, created_by) 
-       VALUES (?, ?, ?, ?, ?, ?)`
+            `INSERT INTO collections (slug, title, description, metadata, is_public, created_by)
+             VALUES (?, ?, ?, ?, ?, ?)`
         ).bind(
             slug,
             title,
