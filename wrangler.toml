@@ -1,0 +1,46 @@
+name = "recollect-oss"
+main = "src/index.js"
+compatibility_date = "2024-04-03"
+
+# KV Namespaces
+kv_namespaces = [
+    { binding = "SESSIONS", id = "SESSIONS_KV_ID" }
+]
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "recollect-db"
+database_id = "DATABASE_ID"
+
+# R2 Bucket
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "recollect-media"
+
+# Environment variables
+[vars]
+SITE_NAME = "My Digital Collection"
+SITE_URL = "https://collections.example.com"
+ADMIN_EMAIL = "admin@example.com"
+JWT_SECRET = "change-this-secret-key"
+MAX_UPLOAD_SIZE = "104857600" # 100MB
+
+# Cron triggers for maintenance
+[triggers]
+crons = ["0 0 * * *"]
+
+# Build configuration
+[build]
+command = "npm run build"
+
+# Development settings
+[dev]
+ip = "localhost"
+port = 8787
+local_protocol = "http"
+
+# Routes
+routes = [
+    { pattern = "collections.example.com/*", zone_name = "example.com" }
+]

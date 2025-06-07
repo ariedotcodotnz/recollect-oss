@@ -1,0 +1,39 @@
+{
+  "name": "recollect-oss",
+  "version": "1.0.0",
+  "description": "Open source digital collection management system on Cloudflare",
+  "main": "src/index.js",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "dev": "wrangler dev",
+    "build": "node scripts/build.js",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply recollect-db",
+    "db:seed": "node scripts/seed.js",
+    "test": "vitest",
+    "lint": "eslint src/",
+    "format": "prettier --write 'src/**/*.{js,jsx,json,css}'"
+  },
+  "keywords": [
+    "digital-collections",
+    "cms",
+    "cloudflare-workers",
+    "museum",
+    "archive"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240408.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "vitest": "^1.5.0",
+    "wrangler": "^3.48.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "itty-router": "^4.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "slugify": "^1.6.6"
+  }
+}
